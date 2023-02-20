@@ -23,7 +23,6 @@ const (
 	requestOperationOption    = "operation"
 	credentialPathOption      = "creds"
 	catalogconnectorUrlOption = "url"
-	datasetIDOption           = "datasetID"
 )
 
 var (
@@ -31,7 +30,6 @@ var (
 	requestOperation    string
 	credentialPath      string
 	catalogconnectorUrl string
-	datasetID           string
 )
 
 type Request struct {
@@ -167,13 +165,12 @@ func RootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		Version:       strings.TrimSpace(version),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log := request.log.With().Str(logging.DATASETID, datasetID).Logger()
 			if requestOperation == "read" {
 				request.operationType = "read"
-				return handleRead(&log)
+				return handleRead(&request.log)
 			} else if requestOperation == "write" {
 				request.operationType = "write"
-				return handleWrite(&log)
+				return handleWrite(&request.log)
 			}
 			return errors.New("Unsupported operation")
 		},
@@ -182,8 +179,7 @@ func RootCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&requestOperation, requestOperationOption, "read", "Request operation")
 	cmd.PersistentFlags().StringVar(&credentialPath, credentialPathOption, "/v1/kubernetes-secrets/my-secret?namespace=default", "Credential path")
 	cmd.PersistentFlags().StringVar(&catalogconnectorUrl, catalogconnectorUrlOption, "http://localhost:8888", "Catalog connector Url")
-	cmd.PersistentFlags().StringVar(&datasetID, datasetIDOption, "demo-dataset", "Dataset ID")
-	cmd.MarkFlagsRequiredTogether(requestJsonOption, requestOperationOption, credentialPathOption, catalogconnectorUrlOption, datasetIDOption)
+	cmd.MarkFlagsRequiredTogether(requestJsonOption, requestOperationOption, credentialPathOption, catalogconnectorUrlOption)
 
 	return cmd
 }
