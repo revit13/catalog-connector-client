@@ -11,7 +11,7 @@ source-build:
 
 .PHONY: run-read
 run-read:
-	./catalog-fake-client --request resources/request.json --operation "read" --creds "qqq" --url "http://localhost:888" --dataset "asset"
+	./catalog-fake-client --request resources/read-request.json --operation "read" --creds "qqq" --url "http://localhost:888" --dataset "asset"
 
 include hack/make-rules/verify.mk
 

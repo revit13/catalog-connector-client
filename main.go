@@ -117,7 +117,7 @@ func RootCmd() *cobra.Command {
 			return errors.New("Unsupported operation")
 		},
 	}
-	cmd.PersistentFlags().StringVar(&requestFile, requestJsonOption, "resources/request.json", "Json file containing the data catalog request")
+	cmd.PersistentFlags().StringVar(&requestFile, requestJsonOption, "resources/read-request.json", "Json file containing the data catalog request")
 	cmd.PersistentFlags().StringVar(&requestOperation, requestOperationOption, "read", "Request operation")
 	cmd.PersistentFlags().StringVar(&credentialPath, credentialPathOption, "cccc", "Credential path")
 	cmd.PersistentFlags().StringVar(&catalogconnectorUrl, catalogconnectorUrlOption, "https://localhost:8888", "Catalog connector Url")
