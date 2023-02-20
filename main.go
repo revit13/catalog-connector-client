@@ -73,27 +73,12 @@ func ValidateAssetResponse(response interface{}, taxonomyFile string, log *zerol
 	return errors.New("allErrs is not null")
 }
 
-func handleRead(log *zerolog.Logger) error {
-	// Initialize DataCatalog interface
-	catalog, err := newDataCatalog()
-	if err != nil {
-		return errors.Wrap(err, "unable to create data catalog facade")
-	}
-	defer catalog.Close()
-
-	// Open our jsonFile
-	jsonFile, err := os.Open(requestFile)
-	// if we os.Open returns an error then handle it
-	if err != nil {
-		return errors.Wrap(err, "error opening "+requestFile)
-	}
-	log.Info().Msg("Successfully Opened " + requestFile)
-	defer jsonFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+func handleRead(requestJsonFile *os.File, catalog dcclient.DataCatalog, log *zerolog.Logger) error {
+	byteValue, _ := ioutil.ReadAll(requestJsonFile)
 	var dataCatalogReq datacatalog.GetAssetRequest
 	json.Unmarshal(byteValue, &dataCatalogReq)
 	var response *datacatalog.GetAssetResponse
+	var err error
 
 	if response, err = catalog.GetAssetInfo(&dataCatalogReq, credentialPath); err != nil {
 		return errors.Wrap(err, "failed to receive the catalog connector response")
@@ -106,27 +91,12 @@ func handleRead(log *zerolog.Logger) error {
 	return nil
 }
 
-func handleWrite(log *zerolog.Logger) error {
-	// Initialize DataCatalog interface
-	catalog, err := newDataCatalog()
-	if err != nil {
-		return errors.Wrap(err, "unable to create data catalog facade")
-	}
-	defer catalog.Close()
-
-	// Open our jsonFile
-	jsonFile, err := os.Open(requestFile)
-	// if we os.Open returns an error then handle it
-	if err != nil {
-		return errors.Wrap(err, "error opening "+requestFile)
-	}
-	log.Info().Msg("Successfully Opened " + requestFile)
-	defer jsonFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+func handleWrite(requestJsonFile *os.File, catalog dcclient.DataCatalog, log *zerolog.Logger) error {
+	byteValue, _ := ioutil.ReadAll(requestJsonFile)
 	var dataCatalogReq datacatalog.CreateAssetRequest
 	json.Unmarshal(byteValue, &dataCatalogReq)
 	var response *datacatalog.CreateAssetResponse
+	var err error
 
 	if response, err = catalog.CreateAsset(&dataCatalogReq, credentialPath); err != nil {
 		log.Error().Err(err).Msg("failed to receive the catalog connector response")
@@ -150,12 +120,27 @@ func RootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		Version:       strings.TrimSpace(version),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Initialize DataCatalog interface
+			catalog, err := newDataCatalog()
+			if err != nil {
+				return errors.Wrap(err, "unable to create data catalog facade")
+			}
+			defer catalog.Close()
+
+			// Open our requestJsonFile
+			requestJsonFile, err := os.Open(requestFile)
+			// if we os.Open returns an error then handle it
+			if err != nil {
+				return errors.Wrap(err, "error opening "+requestFile)
+			}
+			request.log.Info().Msg("Successfully Opened " + requestFile)
+			defer requestJsonFile.Close()
 			if requestOperation == "read" {
 				request.operationType = "read"
-				return handleRead(&request.log)
+				return handleRead(requestJsonFile, catalog, &request.log)
 			} else if requestOperation == "write" {
 				request.operationType = "write"
-				return handleWrite(&request.log)
+				return handleWrite(requestJsonFile, catalog, &request.log)
 			}
 			return errors.New("Unsupported operation")
 		},
