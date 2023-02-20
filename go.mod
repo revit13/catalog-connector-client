@@ -1,4 +1,4 @@
-module catalog-fake-client
+module catalog-connector-client
 
 go 1.19
 

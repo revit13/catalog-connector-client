@@ -105,8 +105,8 @@ func handleRead() error {
 // RootCmd defines the root cli command
 func RootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:           "catalog-fake-client",
-		Short:         "Data catalog fake client",
+		Use:           "catalog-connector-client",
+		Short:         "Data catalog connector client",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       strings.TrimSpace(version),
