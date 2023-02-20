@@ -3,7 +3,6 @@ package main
 import (
 	"emperror.dev/errors"
 	"encoding/json"
-	"fmt"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -11,8 +10,10 @@ import (
 	"strings"
 
 	dcclient "fybrik.io/fybrik/pkg/connectors/datacatalog/clients"
+	"fybrik.io/fybrik/pkg/logging"
 	"fybrik.io/fybrik/pkg/model/datacatalog"
 	"fybrik.io/fybrik/pkg/taxonomy/validate"
+	"github.com/rs/zerolog"
 )
 
 var version string
@@ -33,6 +34,13 @@ var (
 	datasetID           string
 )
 
+type Request struct {
+	log zerolog.Logger
+	operationType string
+}
+
+var request Request
+
 var DataCatalogTaxonomy = "resources/taxonomy/datacatalog.json#/definitions/GetAssetResponse"
 
 func newDataCatalog() (dcclient.DataCatalog, error) {
@@ -42,7 +50,7 @@ func newDataCatalog() (dcclient.DataCatalog, error) {
 		catalogconnectorUrl)
 }
 
-func ValidateAssetResponse(response *datacatalog.GetAssetResponse) error {
+func ValidateAssetResponse(response *datacatalog.GetAssetResponse, log *zerolog.Logger) error {
 	var allErrs []*field.Error
 	taxonomyFile := DataCatalogTaxonomy
 
@@ -51,7 +59,7 @@ func ValidateAssetResponse(response *datacatalog.GetAssetResponse) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("responseJSON:" + string(responseJSON))
+	log.Info().Msg("responseJSON:" + string(responseJSON))
 
 	// Validate Fybrik module against taxonomy
 	allErrs, err = validate.TaxonomyCheck(responseJSON, taxonomyFile)
@@ -67,7 +75,7 @@ func ValidateAssetResponse(response *datacatalog.GetAssetResponse) error {
 	return errors.New("all Err is not null")
 }
 
-func handleRead() error {
+func handleRead(log *zerolog.Logger) error {
 	// Initialize DataCatalog interface
 	catalog, err := newDataCatalog()
 	if err != nil {
@@ -81,23 +89,22 @@ func handleRead() error {
 	if err != nil {
 		return errors.Wrap(err, "error opening "+requestFile)
 	}
-	fmt.Println("Successfully Opened " + requestFile)
+	log.Info().Msg("Successfully Opened " + requestFile)
 	defer jsonFile.Close()
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	var dataCatalogReq datacatalog.GetAssetRequest
 	json.Unmarshal(byteValue, &dataCatalogReq)
 	var response *datacatalog.GetAssetResponse
-	fmt.Println(requestFile)
 
 	if response, err = catalog.GetAssetInfo(&dataCatalogReq, credentialPath); err != nil {
 		return errors.Wrap(err, "failed to receive the catalog connector response")
 	}
-	err = ValidateAssetResponse(response)
+	err = ValidateAssetResponse(response, log)
 	if err != nil {
 		return errors.Wrap(err, "failed to validate the catalog connector response")
 	}
-	fmt.Println("RESPONSE VALIDATION PASS")
+	log.Info().Msg("RESPONSE VALIDATION PASS")
 	return nil
 
 }
@@ -111,8 +118,10 @@ func RootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		Version:       strings.TrimSpace(version),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log := request.log.With().Str(logging.DATASETID, datasetID).Logger()
 			if requestOperation == "read" {
-				return handleRead()
+				request.operationType = "read"
+				return handleRead(&log)
 			}
 			return errors.New("Unsupported operation")
 		},
@@ -122,14 +131,15 @@ func RootCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&credentialPath, credentialPathOption, "cccc", "Credential path")
 	cmd.PersistentFlags().StringVar(&catalogconnectorUrl, catalogconnectorUrlOption, "https://localhost:8888", "Catalog connector Url")
 	cmd.PersistentFlags().StringVar(&datasetID, datasetIDOption, "qqq", "Dataset ID")
-	//cmd.MarkFlagsRequiredTogether(requestJsonOption, requestOperationOption, credentialPathOption, catalogconnectorUrlOption, datasetIDOption)
+	cmd.MarkFlagsRequiredTogether(requestJsonOption, requestOperationOption, credentialPathOption, catalogconnectorUrlOption, datasetIDOption)
 
 	return cmd
 }
 
 func main() {
+	request.log = logging.LogInit(logging.CONTROLLER, "DataCatalogConnectorClient")
 	if err := RootCmd().Execute(); err != nil {
-		fmt.Println(err)
+		request.log.Error().Err(err).Msg("request failed")
 		os.Exit(1)
 	}
 
