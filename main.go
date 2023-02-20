@@ -49,13 +49,18 @@ func newDataCatalog() (dcclient.DataCatalog, error) {
 		catalogconnectorUrl)
 }
 
-func validateAssetResponse(responseJSON []byte, taxonomyFile string, log *zerolog.Logger) error {
+func ValidateAssetResponse(response interface{}, taxonomyFile string, log *zerolog.Logger) error {
 	var allErrs []*field.Error
 
+	// Convert GetAssetRequest Go struct to JSON
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
 	log.Info().Msg("responseJSON:" + string(responseJSON))
 
 	// Validate Fybrik module against taxonomy
-	allErrs, err := validate.TaxonomyCheck(responseJSON, taxonomyFile)
+	allErrs, err = validate.TaxonomyCheck(responseJSON, taxonomyFile)
 	if err != nil {
 		return err
 	}
@@ -65,27 +70,7 @@ func validateAssetResponse(responseJSON []byte, taxonomyFile string, log *zerolo
 		return nil
 	}
 
-	return errors.New("allErrs not empty")
-}
-
-func ValidateGetAssetResponse(response *datacatalog.GetAssetResponse, log *zerolog.Logger) error {
-	// Convert GetAssetRequest Go struct to JSON
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		return err
-	}
-	log.Info().Msg("responseJSON:" + string(responseJSON))
-	return validateAssetResponse(responseJSON, DataCatalogGetAssetResponseTaxonomy, log)
-}
-
-func ValidateCreateAssetResponse(response *datacatalog.CreateAssetResponse, log *zerolog.Logger) error {
-	// Convert CreateAssetRequest Go struct to JSON
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		return err
-	}
-	log.Info().Msg("responseJSON:" + string(responseJSON))
-	return validateAssetResponse(responseJSON, DataCatalogCreateAssetResponseTaxonomy, log)
+	return errors.New("allErrs is not null")
 }
 
 func handleRead(log *zerolog.Logger) error {
@@ -113,7 +98,7 @@ func handleRead(log *zerolog.Logger) error {
 	if response, err = catalog.GetAssetInfo(&dataCatalogReq, credentialPath); err != nil {
 		return errors.Wrap(err, "failed to receive the catalog connector response")
 	}
-	err = ValidateGetAssetResponse(response, log)
+	err = ValidateAssetResponse(response, DataCatalogGetAssetResponseTaxonomy, log)
 	if err != nil {
 		return errors.Wrap(err, "failed to validate the catalog connector response")
 	}
@@ -147,7 +132,7 @@ func handleWrite(log *zerolog.Logger) error {
 		log.Error().Err(err).Msg("failed to receive the catalog connector response")
 		return err
 	}
-	err = ValidateCreateAssetResponse(response, log)
+	err = ValidateAssetResponse(response, DataCatalogCreateAssetResponseTaxonomy, log)
 	if err != nil {
 		return errors.Wrap(err, "failed to validate the catalog connector response")
 	}
