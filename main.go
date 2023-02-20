@@ -35,13 +35,14 @@ var (
 )
 
 type Request struct {
-	log zerolog.Logger
+	log           zerolog.Logger
 	operationType string
 }
 
 var request Request
 
-var DataCatalogTaxonomy = "resources/taxonomy/datacatalog.json#/definitions/GetAssetResponse"
+var DataCatalogGetAssetResponseTaxonomy = "resources/taxonomy/datacatalog.json#/definitions/GetAssetResponse"
+var DataCatalogCreateAssetResponseTaxonomy = "resources/taxonomy/datacatalog.json#/definitions/CreateAssetResponse"
 
 func newDataCatalog() (dcclient.DataCatalog, error) {
 	providerName := "egeria"
@@ -50,19 +51,13 @@ func newDataCatalog() (dcclient.DataCatalog, error) {
 		catalogconnectorUrl)
 }
 
-func ValidateAssetResponse(response *datacatalog.GetAssetResponse, log *zerolog.Logger) error {
+func validateAssetResponse(responseJSON []byte, taxonomyFile string, log *zerolog.Logger) error {
 	var allErrs []*field.Error
-	taxonomyFile := DataCatalogTaxonomy
 
-	// Convert GetAssetRequest Go struct to JSON
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		return err
-	}
 	log.Info().Msg("responseJSON:" + string(responseJSON))
 
 	// Validate Fybrik module against taxonomy
-	allErrs, err = validate.TaxonomyCheck(responseJSON, taxonomyFile)
+	allErrs, err := validate.TaxonomyCheck(responseJSON, taxonomyFile)
 	if err != nil {
 		return err
 	}
@@ -72,7 +67,27 @@ func ValidateAssetResponse(response *datacatalog.GetAssetResponse, log *zerolog.
 		return nil
 	}
 
-	return errors.New("all Err is not null")
+	return errors.New("allErrs not empty")
+}
+
+func ValidateGetAssetResponse(response *datacatalog.GetAssetResponse, log *zerolog.Logger) error {
+	// Convert GetAssetRequest Go struct to JSON
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+	log.Info().Msg("responseJSON:" + string(responseJSON))
+	return validateAssetResponse(responseJSON, DataCatalogGetAssetResponseTaxonomy, log)
+}
+
+func ValidateCreateAssetResponse(response *datacatalog.CreateAssetResponse, log *zerolog.Logger) error {
+	// Convert CreateAssetRequest Go struct to JSON
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+	log.Info().Msg("responseJSON:" + string(responseJSON))
+	return validateAssetResponse(responseJSON, DataCatalogCreateAssetResponseTaxonomy, log)
 }
 
 func handleRead(log *zerolog.Logger) error {
@@ -100,7 +115,41 @@ func handleRead(log *zerolog.Logger) error {
 	if response, err = catalog.GetAssetInfo(&dataCatalogReq, credentialPath); err != nil {
 		return errors.Wrap(err, "failed to receive the catalog connector response")
 	}
-	err = ValidateAssetResponse(response, log)
+	err = ValidateGetAssetResponse(response, log)
+	if err != nil {
+		return errors.Wrap(err, "failed to validate the catalog connector response")
+	}
+	log.Info().Msg("RESPONSE VALIDATION PASS")
+	return nil
+}
+
+func handleWrite(log *zerolog.Logger) error {
+	// Initialize DataCatalog interface
+	catalog, err := newDataCatalog()
+	if err != nil {
+		return errors.Wrap(err, "unable to create data catalog facade")
+	}
+	defer catalog.Close()
+
+	// Open our jsonFile
+	jsonFile, err := os.Open(requestFile)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		return errors.Wrap(err, "error opening "+requestFile)
+	}
+	log.Info().Msg("Successfully Opened " + requestFile)
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var dataCatalogReq datacatalog.CreateAssetRequest
+	json.Unmarshal(byteValue, &dataCatalogReq)
+	var response *datacatalog.CreateAssetResponse
+
+	if response, err = catalog.CreateAsset(&dataCatalogReq, credentialPath); err != nil {
+		log.Error().Err(err).Msg("failed to receive the catalog connector response")
+		return err
+	}
+	err = ValidateCreateAssetResponse(response, log)
 	if err != nil {
 		return errors.Wrap(err, "failed to validate the catalog connector response")
 	}
@@ -122,6 +171,9 @@ func RootCmd() *cobra.Command {
 			if requestOperation == "read" {
 				request.operationType = "read"
 				return handleRead(&log)
+			} else if requestOperation == "write" {
+				request.operationType = "write"
+				return handleWrite(&log)
 			}
 			return errors.New("Unsupported operation")
 		},
