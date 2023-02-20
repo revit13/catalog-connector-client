@@ -7,11 +7,11 @@ Usage:
   catalog-connector-client [flags]
 
 Flags:
-      --creds string       Credential path (default "cccc")
-      --dataset string     Dataset ID (default "qqq")
+      --creds string       Credential path (default "/v1/kubernetes-secrets/my-secret?namespace=default")
+      --datasetID string   Dataset ID (default "demo-dataset")
   -h, --help               help for catalog-connector-client
       --operation string   Request operation (default "read")
-      --request string     Json file containing the data catalog request (default "resources/request.json")
-      --url string         Catalog connector Url (default "https://localhost:8888")
+      --request string     Json file containing the data catalog request (default "resources/read-request.json")
+      --url string         Catalog connector Url (default "http://localhost:8888")
 ```
 

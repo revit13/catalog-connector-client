@@ -11,7 +11,7 @@ source-build:
 
 .PHONY: run-read
 run-read:
-	./catalog-connector-client --request resources/read-request.json --operation "read" --creds "qqq" --url "http://localhost:888" --dataset "id"
+	./catalog-connector-client --request resources/read-request.json --operation "read" --creds "qqq" --url "http://localhost:888" --datasetID "demo-asset"
 
 include hack/make-rules/verify.mk
 

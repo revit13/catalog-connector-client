@@ -23,7 +23,7 @@ const (
 	requestOperationOption    = "operation"
 	credentialPathOption      = "creds"
 	catalogconnectorUrlOption = "url"
-	datasetIDOption           = "dataset"
+	datasetIDOption           = "datasetID"
 )
 
 var (
@@ -128,9 +128,9 @@ func RootCmd() *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVar(&requestFile, requestJsonOption, "resources/read-request.json", "Json file containing the data catalog request")
 	cmd.PersistentFlags().StringVar(&requestOperation, requestOperationOption, "read", "Request operation")
-	cmd.PersistentFlags().StringVar(&credentialPath, credentialPathOption, "cccc", "Credential path")
-	cmd.PersistentFlags().StringVar(&catalogconnectorUrl, catalogconnectorUrlOption, "https://localhost:8888", "Catalog connector Url")
-	cmd.PersistentFlags().StringVar(&datasetID, datasetIDOption, "qqq", "Dataset ID")
+	cmd.PersistentFlags().StringVar(&credentialPath, credentialPathOption, "/v1/kubernetes-secrets/my-secret?namespace=default", "Credential path")
+	cmd.PersistentFlags().StringVar(&catalogconnectorUrl, catalogconnectorUrlOption, "http://localhost:8888", "Catalog connector Url")
+	cmd.PersistentFlags().StringVar(&datasetID, datasetIDOption, "demo-dataset", "Dataset ID")
 	cmd.MarkFlagsRequiredTogether(requestJsonOption, requestOperationOption, credentialPathOption, catalogconnectorUrlOption, datasetIDOption)
 
 	return cmd
