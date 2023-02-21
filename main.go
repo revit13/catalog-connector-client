@@ -19,8 +19,8 @@ import (
 var version string
 
 const (
-	requestJsonOption         = "request"
-	requestOperationOption    = "operation"
+	requestJsonOption         = "request-payload"
+	requestOperationOption    = "operation-type"
 	credentialPathOption      = "creds"
 	catalogconnectorUrlOption = "url"
 )
@@ -135,18 +135,18 @@ func RootCmd() *cobra.Command {
 			}
 			request.log.Info().Msg("Successfully Opened " + requestFile)
 			defer requestJsonFile.Close()
-			if requestOperation == "read" {
-				request.operationType = "read"
+			if requestOperation == "get-asset" {
+				request.operationType = "get-asset"
 				return handleRead(requestJsonFile, catalog, &request.log)
-			} else if requestOperation == "write" {
-				request.operationType = "write"
+			} else if requestOperation == "create-asset" {
+				request.operationType = "create-asset"
 				return handleWrite(requestJsonFile, catalog, &request.log)
 			}
 			return errors.New("Unsupported operation")
 		},
 	}
-	cmd.PersistentFlags().StringVar(&requestFile, requestJsonOption, "resources/read-request.json", "Json file containing the data catalog request")
-	cmd.PersistentFlags().StringVar(&requestOperation, requestOperationOption, "read", "Request operation")
+	cmd.PersistentFlags().StringVar(&requestFile, requestJsonOption, "resources/read-request.json", "Json file containing the payload of the request")
+	cmd.PersistentFlags().StringVar(&requestOperation, requestOperationOption, "get-asset", "Request operation. valid options are get-asset or create-asset")
 	cmd.PersistentFlags().StringVar(&credentialPath, credentialPathOption, "/v1/kubernetes-secrets/my-secret?namespace=default", "Credential path")
 	cmd.PersistentFlags().StringVar(&catalogconnectorUrl, catalogconnectorUrlOption, "http://localhost:8888", "Catalog connector Url")
 	cmd.MarkFlagsRequiredTogether(requestJsonOption, requestOperationOption, credentialPathOption, catalogconnectorUrlOption)
