@@ -1,5 +1,34 @@
 # catalog-connector-client
 
+This is a client for communicating with [Fybrik](https://fybrik.io/) data catalog connector. It tests the validity of the connector response.
+
+Requirements:
+
+    make
+    golang 1.19
+
+
+## Quick Start
+
+
+Building the client:
+
+```bash
+make all
+```
+
+Running get asset request:
+```bash
+make run-read
+```
+
+Running create asset request:
+```bash
+make run-write
+```
+
+Client options:
+
 ```
 Data catalog connector client
 
